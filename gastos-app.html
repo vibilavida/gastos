@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Gastos</title>
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE8;
+    --text: #1A1916;
+    --text2: #6B6860;
+    --text3: #A8A69F;
+    --accent: #1D9E75;
+    --accent-light: #E1F5EE;
+    --accent-dark: #0F6E56;
+    --danger: #D85A30;
+    --danger-light: #FAECE7;
+    --border: rgba(26,25,22,0.1);
+    --border2: rgba(26,25,22,0.06);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1A1916;
+      --surface: #242220;
+      --surface2: #2C2C2A;
+      --text: #F0EDE8;
+      --text2: #A8A69F;
+      --text3: #6B6860;
+      --accent: #1D9E75;
+      --accent-light: #04342C;
+      --accent-dark: #9FE1CB;
+      --danger: #F0997B;
+      --danger-light: #4A1B0C;
+      --border: rgba(240,237,232,0.1);
+      --border2: rgba(240,237,232,0.06);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+  }
+  .header {
+    background: var(--surface);
+    padding: 56px 24px 20px;
+    border-bottom: 1px solid var(--border2);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+  }
+  .app-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .app-subtitle { font-size: 13px; color: var(--text3); margin-top: 2px; }
+  .config-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .tabs {
+    display: flex;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    margin: 16px 24px 0;
+  }
+  .tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .content { padding: 20px 24px 100px; }
+
+  /* FORM */
+  .form-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .form-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .amount-input {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--text);
+    border: none;
+    background: none;
+    width: 100%;
+    outline: none;
+    letter-spacing: -1px;
+    -moz-appearance: textfield;
+  }
+  .amount-input::-webkit-outer-spin-button,
+  .amount-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .amount-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+  }
+  .currency { font-size: 24px; font-weight: 600; color: var(--text2); }
+
+  .field-group { margin-bottom: 16px; }
+  .select-input, .text-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    border: 1.5px solid transparent;
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+  .select-input:focus, .text-input:focus { border-color: var(--accent); }
+  .select-wrapper { position: relative; }
+  .select-wrapper::after {
+    content: '▾';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    pointer-events: none;
+    font-size: 12px;
+  }
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pill {
+    padding: 8px 14px;
+    border-radius: 100px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .pill.selected {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent-dark);
+  }
+  .date-row {
+    display: flex;
+    gap: 8px;
+  }
+  .date-row input {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    border: 1.5px solid transparent;
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+  }
+  .date-row input:focus { border-color: var(--accent); }
+
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: -0.2px;
+    margin-top: 4px;
+  }
+  .submit-btn:active { transform: scale(0.98); background: var(--accent-dark); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 12px 20px;
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--danger); color: white; }
+
+  /* HISTORY */
+  .month-section { margin-bottom: 24px; }
+  .month-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .expense-item {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .expense-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .expense-info { flex: 1; min-width: 0; }
+  .expense-cat { font-size: 14px; font-weight: 600; color: var(--text); }
+  .expense-sub { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .expense-amount { font-size: 16px; font-weight: 700; color: var(--danger); flex-shrink: 0; }
+  .expense-amount.income { color: var(--accent); }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 15px; }
+
+  /* CONFIG */
+  .config-section { margin-bottom: 24px; }
+  .config-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+  .config-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.5; }
+  .config-field { margin-bottom: 12px; }
+  .config-label { font-size: 12px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+  .config-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    font-family: 'SF Mono', monospace;
+  }
+  .config-input:focus { border-color: var(--accent); }
+  .save-btn {
+    width: 100%;
+    padding: 13px;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .step-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 10px;
+  }
+  .step-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent-dark);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+  }
+  .step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .step-body { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .code-block {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 8px;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="app-title">Gastos 💸</div>
+      <div class="app-subtitle" id="header-subtitle">Cargando…</div>
+    </div>
+    <button class="config-btn" onclick="showTab('config')" title="Configuración">⚙️</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" id="tab-nuevo" onclick="showTab('nuevo')">Nuevo gasto</button>
+    <button class="tab" id="tab-historial" onclick="showTab('historial')">Historial</button>
+    <button class="tab" id="tab-config" onclick="showTab('config')">Config</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- TAB: NUEVO GASTO -->
+  <div id="view-nuevo">
+    <div class="form-card">
+      <label class="form-label">Importe</label>
+      <div class="amount-row">
+        <span class="currency">€</span>
+        <input class="amount-input" type="number" id="amount" placeholder="0.00" step="0.01" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="field-group">
+        <label class="form-label">Fecha</label>
+        <div class="date-row">
+          <input type="date" id="date">
+          <button onclick="setToday()" style="padding: 12px 14px; border-radius: 10px; background: var(--surface2); border: none; font-size: 13px; color: var(--text2); cursor: pointer; white-space: nowrap;">Hoy</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="form-label">Pagado por</label>
+        <div class="select-wrapper">
+          <select class="select-input" id="paid-by">
+            <option value="Marin">Marin</option>
+            <option value="Viboras">Viboras</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="form-label">Tipo</label>
+        <div class="select-wrapper">
+          <select class="select-input" id="type">
+            <option value="Gasto">Gasto</option>
+            <option value="Ingreso">Ingreso</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="field-group">
+        <label class="form-label">Categoría</label>
+        <div class="select-wrapper">
+          <select class="select-input" id="category" onchange="updateCategoryIcon()">
+            <option>Bizum</option>
+            <option>Casa</option>
+            <option>Compra</option>
+            <option>Cultura</option>
+            <option>Deporte</option>
+            <option>Donacion</option>
+            <option>Gato</option>
+            <option>Health</option>
+            <option>Nomina</option>
+            <option>Ocio gastronómico</option>
+            <option>Proyectos</option>
+            <option>Regalo</option>
+            <option>Ropa</option>
+            <option>Suscripciones</option>
+            <option>Transporte</option>
+            <option>Viaje</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="form-label">Descripción / Subcategoría</label>
+        <input class="text-input" type="text" id="subcategory" placeholder="Ej: Mercadona, Netflix, Vuelo MAD-BCN…">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="field-group">
+        <label class="form-label">¿Gasto común?</label>
+        <div class="pill-row">
+          <div class="pill selected" id="pill-common-si" onclick="selectCommon('Sí')">Sí</div>
+          <div class="pill" id="pill-common-no" onclick="selectCommon('No')">No</div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="form-label">¿Quién se beneficia?</label>
+        <div class="pill-row" id="beneficiarios-pills">
+          <div class="pill selected" id="pill-ben-marin" onclick="toggleBeneficiario('Marin')">Marin</div>
+          <div class="pill selected" id="pill-ben-viboras" onclick="toggleBeneficiario('Viboras')">Viboras</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitGasto()">
+      Guardar gasto →
+    </button>
+  </div>
+
+  <!-- TAB: HISTORIAL -->
+  <div id="view-historial" style="display:none">
+    <div id="historial-content"></div>
+  </div>
+
+  <!-- TAB: CONFIG -->
+  <div id="view-config" style="display:none">
+    <div class="config-section">
+      <div class="config-title">Conexión con Google Sheets</div>
+      <div class="config-desc">Pega aquí la URL de tu Apps Script para que la app pueda guardar gastos directamente en tu hoja.</div>
+      <div class="config-field">
+        <label class="config-label">URL del Apps Script</label>
+        <input class="config-input" type="url" id="script-url" placeholder="https://script.google.com/macros/s/…/exec">
+      </div>
+      <button class="save-btn" onclick="saveConfig()">Guardar configuración</button>
+    </div>
+
+    <div class="config-section" style="margin-top: 32px;">
+      <div class="config-title">Cómo configurar</div>
+
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-title">Abre tu Google Sheet</div>
+        <div class="step-body">Ve a <strong>Extensiones → Apps Script</strong> en el menú superior de tu hoja de cálculo.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-title">Pega el script</div>
+        <div class="step-body">Borra todo el código existente y pega el script que te ha dado Claude. Haz clic en 💾 Guardar.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-title">Despliega como app web</div>
+        <div class="step-body">Haz clic en <strong>Implementar → Nueva implementación</strong>. Elige tipo: <em>Aplicación web</em>. En "Ejecutar como" selecciona <em>Yo</em>. En "Quién tiene acceso" selecciona <em>Cualquier persona</em>. Pulsa Implementar y autoriza.</div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <div class="step-title">Copia la URL</div>
+        <div class="step-body">Copia la URL que aparece tras el despliegue (empieza por <code>https://script.google.com/macros/s/…</code>) y pégala arriba en esta pantalla.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'gastos_local';
+const CONFIG_KEY = 'gastos_config';
+
+const CAT_ICONS = {
+  'Bizum': '💸', 'Casa': '🏠', 'Compra': '🛒', 'Cultura': '🎭',
+  'Deporte': '🏃', 'Donacion': '❤️', 'Gato': '🐱', 'Health': '💊',
+  'Nomina': '💰', 'Ocio gastronómico': '🍽️', 'Proyectos': '🔨',
+  'Regalo': '🎁', 'Ropa': '👕', 'Suscripciones': '📱',
+  'Transporte': '🚇', 'Viaje': '✈️'
+};
+
+let selectedCommon = 'Sí';
+let selectedBeneficiarios = ['Marin', 'Viboras'];
+let config = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+let gastos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+function init() {
+  setToday();
+  document.getElementById('script-url').value = config.scriptUrl || '';
+  updateSubtitle();
+}
+
+function updateSubtitle() {
+  const sub = document.getElementById('header-subtitle');
+  sub.textContent = config.scriptUrl ? '✓ Conectado a Google Sheets' : 'Sin conectar — configura primero';
+}
+
+function setToday() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  const d = String(now.getDate()).padStart(2,'0');
+  document.getElementById('date').value = `${y}-${m}-${d}`;
+}
+
+function selectCommon(val) {
+  selectedCommon = val;
+  document.getElementById('pill-common-si').classList.toggle('selected', val === 'Sí');
+  document.getElementById('pill-common-no').classList.toggle('selected', val === 'No');
+}
+
+function toggleBeneficiario(name) {
+  const idx = selectedBeneficiarios.indexOf(name);
+  if (idx > -1) {
+    if (selectedBeneficiarios.length > 1) selectedBeneficiarios.splice(idx, 1);
+  } else {
+    selectedBeneficiarios.push(name);
+  }
+  document.getElementById('pill-ben-marin').classList.toggle('selected', selectedBeneficiarios.includes('Marin'));
+  document.getElementById('pill-ben-viboras').classList.toggle('selected', selectedBeneficiarios.includes('Viboras'));
+}
+
+function showTab(tab) {
+  ['nuevo','historial','config'].forEach(t => {
+    document.getElementById(`view-${t}`).style.display = t === tab ? '' : 'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+  if (tab === 'historial') renderHistorial();
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2800);
+}
+
+function saveConfig() {
+  const url = document.getElementById('script-url').value.trim();
+  config.scriptUrl = url;
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  updateSubtitle();
+  showToast('✓ Configuración guardada');
+}
+
+async function submitGasto() {
+  const amount = parseFloat(document.getElementById('amount').value);
+  const date = document.getElementById('date').value;
+  const paidBy = document.getElementById('paid-by').value;
+  const type = document.getElementById('type').value;
+  const category = document.getElementById('category').value;
+  const subcategory = document.getElementById('subcategory').value.trim();
+
+  if (!amount || isNaN(amount) || amount <= 0) { showToast('Introduce un importe válido', true); return; }
+  if (!date) { showToast('Selecciona una fecha', true); return; }
+  if (!subcategory) { showToast('Añade una descripción', true); return; }
+
+  const [y, m, d] = date.split('-');
+  const dateObj = new Date(date);
+  const sign = type === 'Gasto' ? -1 : 1;
+  const finalAmount = sign * Math.abs(amount);
+
+  const gasto = {
+    year: y,
+    month: date.substring(0,7),
+    date: date,
+    paidBy,
+    type,
+    amount: finalAmount,
+    category,
+    subcategory,
+    common: selectedCommon,
+    beneficiarios: selectedBeneficiarios.join(';'),
+    ts: Date.now()
+  };
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  // Save locally always
+  gastos.unshift(gasto);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos));
+
+  if (config.scriptUrl) {
+    try {
+      const params = new URLSearchParams({
+        year: y,
+        month: `${y}-${m}-01`,
+        date: `${y}-${m}-${d}`,
+        paidBy,
+        type,
+        amount: finalAmount,
+        category,
+        subcategory,
+        common: selectedCommon,
+        beneficiarios: selectedBeneficiarios.join(';')
+      });
+      await fetch(`${config.scriptUrl}?${params}`);
+      showToast('✓ Guardado en Google Sheets');
+    } catch(e) {
+      showToast('⚠️ Guardado local — error con Sheets', true);
+    }
+  } else {
+    showToast('✓ Guardado localmente (sin Sheets)');
+  }
+
+  // Reset form
+  document.getElementById('amount').value = '';
+  document.getElementById('subcategory').value = '';
+  setToday();
+  btn.disabled = false;
+  btn.textContent = 'Guardar gasto →';
+}
+
+function renderHistorial() {
+  const container = document.getElementById('historial-content');
+  if (!gastos.length) {
+    container.innerHTML = '<div class="empty-state">Todavía no hay gastos guardados 🙂</div>';
+    return;
+  }
+  const byMonth = {};
+  gastos.forEach(g => {
+    const k = g.month || g.date?.substring(0,7) || 'Sin fecha';
+    if (!byMonth[k]) byMonth[k] = [];
+    byMonth[k].push(g);
+  });
+  const months = Object.keys(byMonth).sort().reverse();
+  const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  container.innerHTML = months.map(m => {
+    const [y, mo] = m.split('-');
+    const label = mo ? `${monthNames[parseInt(mo)-1]} ${y}` : m;
+    const items = byMonth[m];
+    const total = items.reduce((s,g) => s + (parseFloat(g.amount)||0), 0);
+    return `
+      <div class="month-section">
+        <div class="month-label">${label} · ${total.toFixed(2).replace('-','')}€</div>
+        ${items.map(g => `
+          <div class="expense-item">
+            <div class="expense-icon">${CAT_ICONS[g.category] || '💳'}</div>
+            <div class="expense-info">
+              <div class="expense-cat">${g.category}</div>
+              <div class="expense-sub">${g.subcategory || ''} · ${g.paidBy}</div>
+            </div>
+            <div class="expense-amount ${parseFloat(g.amount)>0?'income':''}">${parseFloat(g.amount)>0?'+':''}${parseFloat(g.amount).toFixed(2)}€</div>
+          </div>
+        `).join('')}
+      </div>`;
+  }).join('');
+}
+
+init();
+</script>
+</body>
+</html>
