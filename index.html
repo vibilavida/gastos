@@ -554,6 +554,16 @@
 
   <!-- TAB: RESUMEN -->
   <div id="view-resumen" style="display:none">
+    <div id="resumen-filters" style="margin-bottom:4px; display:none">
+      <div style="margin-bottom:10px;">
+        <div class="form-label" style="margin-bottom:6px;">Pagador</div>
+        <div class="pill-row" id="filter-pagador-pills"></div>
+      </div>
+      <div>
+        <div class="form-label" style="margin-bottom:6px;">Categoría</div>
+        <div class="pill-row" id="filter-cat-pills"></div>
+      </div>
+    </div>
     <div id="resumen-content"></div>
   </div>
 
@@ -783,6 +793,10 @@ async function fetchGastosFromSheets() {
   return null;
 }
 
+let resumenMesData = []; // todos los gastos del mes en curso
+let resumenFilterCat = null;
+let resumenFilterPagador = null;
+
 async function renderResumen() {
   const container = document.getElementById('resumen-content');
   container.innerHTML = '<div class="empty-state">Cargando…</div>';
@@ -792,17 +806,60 @@ async function renderResumen() {
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  resumenMesData = data.filter(g => (g.month || g.date?.substring(0,7)) === currentMonth);
+  resumenFilterCat = null;
+  resumenFilterPagador = null;
+
+  // Construir pills de filtro con las categorías y pagadores del mes
+  const cats = [...new Set(resumenMesData.filter(g => parseFloat(g.amount) < 0).map(g => g.category).filter(Boolean))].sort();
+  const pagadores = [...new Set(resumenMesData.filter(g => parseFloat(g.amount) < 0).map(g => g.paidBy).filter(Boolean))].sort();
+
+  const filtersEl = document.getElementById('resumen-filters');
+  if (resumenMesData.length) {
+    filtersEl.style.display = '';
+    document.getElementById('filter-pagador-pills').innerHTML = pagadores.map(p => `
+      <div class="pill" id="fpill-pagador-${p.replace(/ /g,'_')}" onclick="toggleResumenFilter('pagador','${p}')">${p}</div>
+    `).join('');
+    document.getElementById('filter-cat-pills').innerHTML = cats.map(c => `
+      <div class="pill" id="fpill-cat-${c.replace(/ /g,'_')}" onclick="toggleResumenFilter('cat','${c}')">${CAT_ICONS[c] || ''} ${c}</div>
+    `).join('');
+  } else {
+    filtersEl.style.display = 'none';
+  }
+
+  paintResumen();
+}
+
+function toggleResumenFilter(type, value) {
+  if (type === 'cat') {
+    resumenFilterCat = resumenFilterCat === value ? null : value;
+    document.querySelectorAll('[id^="fpill-cat-"]').forEach(el => el.classList.remove('selected'));
+    if (resumenFilterCat) document.getElementById(`fpill-cat-${value.replace(/ /g,'_')}`)?.classList.add('selected');
+  } else {
+    resumenFilterPagador = resumenFilterPagador === value ? null : value;
+    document.querySelectorAll('[id^="fpill-pagador-"]').forEach(el => el.classList.remove('selected'));
+    if (resumenFilterPagador) document.getElementById(`fpill-pagador-${value.replace(/ /g,'_')}`)?.classList.add('selected');
+  }
+  paintResumen();
+}
+
+function paintResumen() {
+  const container = document.getElementById('resumen-content');
+  const now = new Date();
   const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const monthLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
 
-  const mes = data.filter(g => (g.month || g.date?.substring(0,7)) === currentMonth);
-
-  if (!mes.length) {
+  if (!resumenMesData.length) {
     container.innerHTML = `
       <div class="resumen-mes">${monthLabel}</div>
       <div class="empty-state">Sin gastos este mes 🙂</div>`;
     return;
   }
+
+  // Aplicar filtros
+  let mes = resumenMesData;
+  if (resumenFilterPagador) mes = mes.filter(g => g.paidBy === resumenFilterPagador);
+  if (resumenFilterCat)     mes = mes.filter(g => g.category === resumenFilterCat);
 
   // ── Totales ──────────────────────────────────────────────
   const soloGastos = mes.filter(g => parseFloat(g.amount) < 0);
@@ -810,7 +867,7 @@ async function renderResumen() {
   const totalIngresos = mes.filter(g => parseFloat(g.amount) > 0).reduce((s,g) => s + (parseFloat(g.amount)||0), 0);
   const numTransac = soloGastos.length;
 
-  // ── Por categoría (solo gastos) ───────────────────────────
+  // ── Por categoría ─────────────────────────────────────────
   const byCat = {};
   soloGastos.forEach(g => {
     const c = g.category || 'Sin categoría';
@@ -819,32 +876,31 @@ async function renderResumen() {
   const catsSorted = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
   const maxCat = catsSorted[0]?.[1] || 1;
 
-  // ── Balance Marin / Viboras ───────────────────────────────
-  // Qué ha pagado cada uno de su bolsillo (excluye cuenta conjunta)
-  const pagosMarin   = soloGastos.filter(g => g.paidBy === 'Marin').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
-  const pagosViboras = soloGastos.filter(g => g.paidBy === 'Viboras').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+  // ── Balance ───────────────────────────────────────────────
+  const pagosMarin    = soloGastos.filter(g => g.paidBy === 'Marin').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+  const pagosViboras  = soloGastos.filter(g => g.paidBy === 'Viboras').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
   const pagosConjunta = soloGastos.filter(g => g.paidBy === 'Cuenta conjunta').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
 
-  // Gastos comunes pagados por cada uno → cuánto le toca compensar al otro
-  const comunesMarin   = soloGastos.filter(g => g.paidBy === 'Marin'   && g.common === 'Sí').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
-  const comunesViboras = soloGastos.filter(g => g.paidBy === 'Viboras' && g.common === 'Sí').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
-
-  // Cada uno debería pagar la mitad de los gastos comunes entre los dos
-  const totalComunesEntreDos = comunesMarin + comunesViboras;
-  const mitad = totalComunesEntreDos / 2;
-  const deudaNeta = comunesMarin - mitad; // positivo → Viboras le debe a Marin
-
-  let deudaTexto = '';
-  if (Math.abs(deudaNeta) < 0.01) {
-    deudaTexto = '✓ Estáis al día 🎉';
-  } else if (deudaNeta > 0) {
-    deudaTexto = `Viboras le debe <strong>${deudaNeta.toFixed(2)}€</strong> a Marin`;
-  } else {
-    deudaTexto = `Marin le debe <strong>${Math.abs(deudaNeta).toFixed(2)}€</strong> a Viboras`;
+  // Solo calcular deuda cuando no hay filtros activos (para que tenga sentido)
+  let deudaHTML = '';
+  if (!resumenFilterPagador && !resumenFilterCat) {
+    const comunesMarin   = soloGastos.filter(g => g.paidBy === 'Marin'   && g.common === 'Sí').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+    const comunesViboras = soloGastos.filter(g => g.paidBy === 'Viboras' && g.common === 'Sí').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+    const deudaNeta = comunesMarin - (comunesMarin + comunesViboras) / 2;
+    let deudaTexto = '';
+    if (Math.abs(deudaNeta) < 0.01) deudaTexto = '✓ Estáis al día 🎉';
+    else if (deudaNeta > 0) deudaTexto = `Viboras le debe <strong>${deudaNeta.toFixed(2)}€</strong> a Marin`;
+    else deudaTexto = `Marin le debe <strong>${Math.abs(deudaNeta).toFixed(2)}€</strong> a Viboras`;
+    deudaHTML = `<div class="balance-deuda">${deudaTexto}</div>`;
   }
+
+  const activeFiltro = resumenFilterPagador || resumenFilterCat
+    ? `<div style="font-size:12px;color:var(--text3);margin-top:-4px;margin-bottom:12px;">Filtrado · <span style="color:var(--accent);cursor:pointer" onclick="clearResumenFilters()">Quitar filtros</span></div>`
+    : '';
 
   container.innerHTML = `
     <div class="resumen-mes">${monthLabel}</div>
+    ${activeFiltro}
 
     <div class="resumen-total-card">
       <div>
@@ -857,32 +913,23 @@ async function renderResumen() {
     <div class="resumen-section-title">Balance personal</div>
     <div class="resumen-card">
       <div class="balance-row">
-        <div>
-          <div class="balance-name">Marin</div>
-          <div class="balance-sub">Pagado de su bolsillo</div>
-        </div>
+        <div><div class="balance-name">Marin</div><div class="balance-sub">Pagado de su bolsillo</div></div>
         <div class="balance-amount gasto">${pagosMarin.toFixed(2)}€</div>
       </div>
       <div class="balance-row">
-        <div>
-          <div class="balance-name">Viboras</div>
-          <div class="balance-sub">Pagado de su bolsillo</div>
-        </div>
+        <div><div class="balance-name">Viboras</div><div class="balance-sub">Pagado de su bolsillo</div></div>
         <div class="balance-amount gasto">${pagosViboras.toFixed(2)}€</div>
       </div>
       <div class="balance-row">
-        <div>
-          <div class="balance-name">Cuenta conjunta</div>
-          <div class="balance-sub">Gastos compartidos</div>
-        </div>
+        <div><div class="balance-name">Cuenta conjunta</div><div class="balance-sub">Gastos compartidos</div></div>
         <div class="balance-amount gasto">${pagosConjunta.toFixed(2)}€</div>
       </div>
-      <div class="balance-deuda">${deudaTexto}</div>
+      ${deudaHTML}
     </div>
 
     <div class="resumen-section-title">Por categoría</div>
     <div class="resumen-card">
-      ${catsSorted.map(([cat, total]) => `
+      ${catsSorted.length ? catsSorted.map(([cat, total]) => `
         <div class="cat-row">
           <div class="cat-icon-sm">${CAT_ICONS[cat] || '💳'}</div>
           <div class="cat-info">
@@ -893,9 +940,16 @@ async function renderResumen() {
           </div>
           <div class="cat-amount">${total.toFixed(2)}€</div>
         </div>
-      `).join('')}
+      `).join('') : '<div style="color:var(--text3);font-size:14px;text-align:center;padding:8px 0">Sin resultados</div>'}
     </div>
   `;
+}
+
+function clearResumenFilters() {
+  resumenFilterCat = null;
+  resumenFilterPagador = null;
+  document.querySelectorAll('[id^="fpill-cat-"], [id^="fpill-pagador-"]').forEach(el => el.classList.remove('selected'));
+  paintResumen();
 }
 
 let historialData = [];
