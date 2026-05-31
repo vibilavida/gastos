@@ -760,7 +760,18 @@ async function fetchGastosFromSheets() {
     const res = await fetch(`${config.scriptUrl}?action=read`);
     const json = await res.json();
     if (json.status === 'ok' && Array.isArray(json.data)) {
-      gastos = json.data;
+      gastos = json.data.map(g => {
+        // Normalizar fecha a YYYY-MM-DD sea cual sea el formato que venga
+        const d = new Date(g.date);
+        if (!isNaN(d)) {
+          const y = d.getFullYear();
+          const m = String(d.getMonth()+1).padStart(2,'0');
+          const day = String(d.getDate()).padStart(2,'0');
+          g.date = `${y}-${m}-${day}`;
+          g.month = `${y}-${m}`;
+        }
+        return g;
+      });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos));
       return gastos;
     }
