@@ -948,6 +948,14 @@ function toggleMsOption(type, value) {
 function onlyMsOption(type, value) {
   const excluded = type === 'cat' ? resumenExcludedCats : resumenExcludedPagadores;
   const all = type === 'cat' ? resumenAllCats : resumenAllPagadores;
+
+  // Si ya está en modo "solo este", volver a seleccionar todos
+  const isAlreadyOnly = excluded.size === all.length - 1 && !excluded.has(value);
+  if (isAlreadyOnly) {
+    clearResumenFilters();
+    return;
+  }
+
   excluded.clear();
   all.forEach(o => {
     const el = document.getElementById(`msopt-${type}-${o.replace(/ /g,'_')}`);
