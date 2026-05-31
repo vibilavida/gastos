@@ -341,6 +341,100 @@
     line-height: 1.5;
   }
   a { color: var(--accent); }
+
+  /* RESUMEN */
+  .resumen-mes {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .resumen-total-card {
+    background: var(--accent);
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .resumen-total-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75); }
+  .resumen-total-amount { font-size: 32px; font-weight: 800; color: white; letter-spacing: -1px; }
+  .resumen-total-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+  .resumen-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin: 20px 0 10px;
+  }
+
+  .resumen-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+  }
+
+  .balance-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border2);
+  }
+  .balance-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .balance-row:first-child { padding-top: 0; }
+  .balance-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+  .balance-amount { font-size: 16px; font-weight: 700; }
+  .balance-amount.gasto { color: var(--danger); }
+  .balance-amount.ingreso { color: var(--accent); }
+  .balance-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
+
+  .balance-deuda {
+    background: var(--accent-light);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--accent-dark);
+    font-weight: 500;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .cat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border2);
+  }
+  .cat-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .cat-row:first-child { padding-top: 0; }
+  .cat-icon-sm {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .cat-info { flex: 1; min-width: 0; }
+  .cat-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .cat-bar-wrap {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .cat-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+  .cat-amount { font-size: 14px; font-weight: 700; color: var(--danger); flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -354,7 +448,8 @@
     <button class="config-btn" onclick="showTab('config')" title="Configuración">⚙️</button>
   </div>
   <div class="tabs">
-    <button class="tab active" id="tab-nuevo" onclick="showTab('nuevo')">Nuevo gasto</button>
+    <button class="tab active" id="tab-nuevo" onclick="showTab('nuevo')">Nuevo</button>
+    <button class="tab" id="tab-resumen" onclick="showTab('resumen')">Resumen</button>
     <button class="tab" id="tab-historial" onclick="showTab('historial')">Historial</button>
     <button class="tab" id="tab-config" onclick="showTab('config')">Config</button>
   </div>
@@ -455,6 +550,11 @@
     <button class="submit-btn" id="submit-btn" onclick="submitGasto()">
       Guardar gasto →
     </button>
+  </div>
+
+  <!-- TAB: RESUMEN -->
+  <div id="view-resumen" style="display:none">
+    <div id="resumen-content"></div>
   </div>
 
   <!-- TAB: HISTORIAL -->
@@ -561,11 +661,12 @@ function toggleBeneficiario(name) {
 }
 
 function showTab(tab) {
-  ['nuevo','historial','config'].forEach(t => {
+  ['nuevo','resumen','historial','config'].forEach(t => {
     document.getElementById(`view-${t}`).style.display = t === tab ? '' : 'none';
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
   });
   if (tab === 'historial') renderHistorial();
+  if (tab === 'resumen') renderResumen();
 }
 
 function showToast(msg, isError) {
@@ -653,14 +754,148 @@ async function submitGasto() {
   btn.textContent = 'Guardar gasto →';
 }
 
-function renderHistorial() {
+async function fetchGastosFromSheets() {
+  if (!config.scriptUrl) return null;
+  try {
+    const res = await fetch(`${config.scriptUrl}?action=read`);
+    const json = await res.json();
+    if (json.status === 'ok' && Array.isArray(json.data)) {
+      gastos = json.data;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos));
+      return gastos;
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function renderResumen() {
+  const container = document.getElementById('resumen-content');
+  container.innerHTML = '<div class="empty-state">Cargando…</div>';
+
+  const fromSheets = await fetchGastosFromSheets();
+  const data = fromSheets || gastos;
+
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const monthLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+  const mes = data.filter(g => (g.month || g.date?.substring(0,7)) === currentMonth);
+
+  if (!mes.length) {
+    container.innerHTML = `
+      <div class="resumen-mes">${monthLabel}</div>
+      <div class="empty-state">Sin gastos este mes 🙂</div>`;
+    return;
+  }
+
+  // ── Totales ──────────────────────────────────────────────
+  const soloGastos = mes.filter(g => parseFloat(g.amount) < 0);
+  const totalGastado = soloGastos.reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+  const totalIngresos = mes.filter(g => parseFloat(g.amount) > 0).reduce((s,g) => s + (parseFloat(g.amount)||0), 0);
+  const numTransac = soloGastos.length;
+
+  // ── Por categoría (solo gastos) ───────────────────────────
+  const byCat = {};
+  soloGastos.forEach(g => {
+    const c = g.category || 'Sin categoría';
+    byCat[c] = (byCat[c] || 0) + Math.abs(parseFloat(g.amount)||0);
+  });
+  const catsSorted = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  const maxCat = catsSorted[0]?.[1] || 1;
+
+  // ── Balance Marin / Viboras ───────────────────────────────
+  // Qué ha pagado cada uno de su bolsillo (excluye cuenta conjunta)
+  const pagosMarin   = soloGastos.filter(g => g.paidBy === 'Marin').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+  const pagosViboras = soloGastos.filter(g => g.paidBy === 'Viboras').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+  const pagosConjunta = soloGastos.filter(g => g.paidBy === 'Cuenta conjunta').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+
+  // Gastos comunes pagados por cada uno → cuánto le toca compensar al otro
+  const comunesMarin   = soloGastos.filter(g => g.paidBy === 'Marin'   && g.common === 'Sí').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+  const comunesViboras = soloGastos.filter(g => g.paidBy === 'Viboras' && g.common === 'Sí').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
+
+  // Cada uno debería pagar la mitad de los gastos comunes entre los dos
+  const totalComunesEntreDos = comunesMarin + comunesViboras;
+  const mitad = totalComunesEntreDos / 2;
+  const deudaNeta = comunesMarin - mitad; // positivo → Viboras le debe a Marin
+
+  let deudaTexto = '';
+  if (Math.abs(deudaNeta) < 0.01) {
+    deudaTexto = '✓ Estáis al día 🎉';
+  } else if (deudaNeta > 0) {
+    deudaTexto = `Viboras le debe <strong>${deudaNeta.toFixed(2)}€</strong> a Marin`;
+  } else {
+    deudaTexto = `Marin le debe <strong>${Math.abs(deudaNeta).toFixed(2)}€</strong> a Viboras`;
+  }
+
+  container.innerHTML = `
+    <div class="resumen-mes">${monthLabel}</div>
+
+    <div class="resumen-total-card">
+      <div>
+        <div class="resumen-total-label">Total gastado</div>
+        <div class="resumen-total-amount">${totalGastado.toFixed(2)}€</div>
+        <div class="resumen-total-sub">${numTransac} gasto${numTransac !== 1 ? 's' : ''}${totalIngresos > 0 ? ` · +${totalIngresos.toFixed(2)}€ ingresos` : ''}</div>
+      </div>
+    </div>
+
+    <div class="resumen-section-title">Balance personal</div>
+    <div class="resumen-card">
+      <div class="balance-row">
+        <div>
+          <div class="balance-name">Marin</div>
+          <div class="balance-sub">Pagado de su bolsillo</div>
+        </div>
+        <div class="balance-amount gasto">${pagosMarin.toFixed(2)}€</div>
+      </div>
+      <div class="balance-row">
+        <div>
+          <div class="balance-name">Viboras</div>
+          <div class="balance-sub">Pagado de su bolsillo</div>
+        </div>
+        <div class="balance-amount gasto">${pagosViboras.toFixed(2)}€</div>
+      </div>
+      <div class="balance-row">
+        <div>
+          <div class="balance-name">Cuenta conjunta</div>
+          <div class="balance-sub">Gastos compartidos</div>
+        </div>
+        <div class="balance-amount gasto">${pagosConjunta.toFixed(2)}€</div>
+      </div>
+      <div class="balance-deuda">${deudaTexto}</div>
+    </div>
+
+    <div class="resumen-section-title">Por categoría</div>
+    <div class="resumen-card">
+      ${catsSorted.map(([cat, total]) => `
+        <div class="cat-row">
+          <div class="cat-icon-sm">${CAT_ICONS[cat] || '💳'}</div>
+          <div class="cat-info">
+            <div class="cat-name">${cat}</div>
+            <div class="cat-bar-wrap">
+              <div class="cat-bar" style="width:${Math.round((total/maxCat)*100)}%"></div>
+            </div>
+          </div>
+          <div class="cat-amount">${total.toFixed(2)}€</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function renderHistorial() {
   const container = document.getElementById('historial-content');
-  if (!gastos.length) {
+  container.innerHTML = '<div class="empty-state">Cargando…</div>';
+
+  const fromSheets = await fetchGastosFromSheets();
+  let data = fromSheets || gastos;
+
+  if (!data.length) {
     container.innerHTML = '<div class="empty-state">Todavía no hay gastos guardados 🙂</div>';
     return;
   }
   const byMonth = {};
-  gastos.forEach(g => {
+  data.forEach(g => {
     const k = g.month || g.date?.substring(0,7) || 'Sin fecha';
     if (!byMonth[k]) byMonth[k] = [];
     byMonth[k].push(g);
