@@ -554,14 +554,18 @@
 
   <!-- TAB: RESUMEN -->
   <div id="view-resumen" style="display:none">
-    <div id="resumen-filters" style="margin-bottom:4px; display:none">
-      <div style="margin-bottom:10px;">
-        <div class="form-label" style="margin-bottom:6px;">Pagador</div>
-        <div class="pill-row" id="filter-pagador-pills"></div>
-      </div>
-      <div>
-        <div class="form-label" style="margin-bottom:6px;">Categoría</div>
-        <div class="pill-row" id="filter-cat-pills"></div>
+    <div id="resumen-filters" style="display:none; margin-bottom:12px;">
+      <div style="display:flex; gap:8px;">
+        <div class="select-wrapper" style="flex:1">
+          <select class="select-input" id="filter-pagador-select" onchange="applyResumenSelects()" style="font-size:13px; padding:10px 12px;">
+            <option value="">Todos los pagadores</option>
+          </select>
+        </div>
+        <div class="select-wrapper" style="flex:1">
+          <select class="select-input" id="filter-cat-select" onchange="applyResumenSelects()" style="font-size:13px; padding:10px 12px;">
+            <option value="">Todas las categorías</option>
+          </select>
+        </div>
       </div>
     </div>
     <div id="resumen-content"></div>
@@ -817,12 +821,10 @@ async function renderResumen() {
   const filtersEl = document.getElementById('resumen-filters');
   if (resumenMesData.length) {
     filtersEl.style.display = '';
-    document.getElementById('filter-pagador-pills').innerHTML = pagadores.map(p => `
-      <div class="pill" id="fpill-pagador-${p.replace(/ /g,'_')}" onclick="toggleResumenFilter('pagador','${p}')">${p}</div>
-    `).join('');
-    document.getElementById('filter-cat-pills').innerHTML = cats.map(c => `
-      <div class="pill" id="fpill-cat-${c.replace(/ /g,'_')}" onclick="toggleResumenFilter('cat','${c}')">${CAT_ICONS[c] || ''} ${c}</div>
-    `).join('');
+    const selPagador = document.getElementById('filter-pagador-select');
+    const selCat = document.getElementById('filter-cat-select');
+    selPagador.innerHTML = '<option value="">Todos los pagadores</option>' + pagadores.map(p => `<option value="${p}">${p}</option>`).join('');
+    selCat.innerHTML = '<option value="">Todas las categorías</option>' + cats.map(c => `<option value="${c}">${CAT_ICONS[c] || ''} ${c}</option>`).join('');
   } else {
     filtersEl.style.display = 'none';
   }
@@ -830,16 +832,9 @@ async function renderResumen() {
   paintResumen();
 }
 
-function toggleResumenFilter(type, value) {
-  if (type === 'cat') {
-    resumenFilterCat = resumenFilterCat === value ? null : value;
-    document.querySelectorAll('[id^="fpill-cat-"]').forEach(el => el.classList.remove('selected'));
-    if (resumenFilterCat) document.getElementById(`fpill-cat-${value.replace(/ /g,'_')}`)?.classList.add('selected');
-  } else {
-    resumenFilterPagador = resumenFilterPagador === value ? null : value;
-    document.querySelectorAll('[id^="fpill-pagador-"]').forEach(el => el.classList.remove('selected'));
-    if (resumenFilterPagador) document.getElementById(`fpill-pagador-${value.replace(/ /g,'_')}`)?.classList.add('selected');
-  }
+function applyResumenSelects() {
+  resumenFilterPagador = document.getElementById('filter-pagador-select').value || null;
+  resumenFilterCat = document.getElementById('filter-cat-select').value || null;
   paintResumen();
 }
 
@@ -948,7 +943,8 @@ function paintResumen() {
 function clearResumenFilters() {
   resumenFilterCat = null;
   resumenFilterPagador = null;
-  document.querySelectorAll('[id^="fpill-cat-"], [id^="fpill-pagador-"]').forEach(el => el.classList.remove('selected'));
+  document.getElementById('filter-pagador-select').value = '';
+  document.getElementById('filter-cat-select').value = '';
   paintResumen();
 }
 
