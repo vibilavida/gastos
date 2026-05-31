@@ -381,12 +381,10 @@
     padding: 11px 14px;
     font-size: 13px;
     color: var(--text);
-    cursor: pointer;
     border-bottom: 1px solid var(--border2);
     user-select: none;
   }
   .ms-option:last-child { border-bottom: none; }
-  .ms-option:active { background: var(--surface2); }
   .ms-check {
     width: 18px; height: 18px;
     border-radius: 5px;
@@ -395,6 +393,7 @@
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
     font-size: 11px;
+    cursor: pointer;
     transition: all 0.12s;
   }
   .ms-option.checked .ms-check {
@@ -402,6 +401,30 @@
     border-color: var(--accent);
     color: white;
   }
+  .ms-option.unchecked .ms-check {
+    background: var(--surface2);
+    border-color: var(--border);
+    opacity: 0.4;
+  }
+  .ms-label {
+    flex: 1;
+    cursor: pointer;
+    position: relative;
+    padding-right: 36px;
+  }
+  .ms-only {
+    position: absolute;
+    right: 0; top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .ms-option:hover .ms-only { opacity: 1; }
 
   /* RESUMEN */
   .resumen-mes {
@@ -861,8 +884,10 @@ async function fetchGastosFromSheets() {
 }
 
 let resumenMesData = [];
-let resumenFilterCats = [];
-let resumenFilterPagadores = [];
+let resumenExcludedCats = new Set();
+let resumenExcludedPagadores = new Set();
+let resumenAllCats = [];
+let resumenAllPagadores = [];
 
 async function renderResumen() {
   const container = document.getElementById('resumen-content');
@@ -874,8 +899,8 @@ async function renderResumen() {
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   resumenMesData = data.filter(g => (g.month || g.date?.substring(0,7)) === currentMonth);
-  resumenFilterCats = [];
-  resumenFilterPagadores = [];
+  resumenExcludedCats = new Set();
+  resumenExcludedPagadores = new Set();
 
   const cats = [...new Set(resumenMesData.filter(g => parseFloat(g.amount) < 0).map(g => g.category).filter(Boolean))].sort();
   const pagadores = [...new Set(resumenMesData.filter(g => parseFloat(g.amount) < 0).map(g => g.paidBy).filter(Boolean))].sort();
@@ -883,6 +908,8 @@ async function renderResumen() {
   const filtersEl = document.getElementById('resumen-filters');
   if (resumenMesData.length) {
     filtersEl.style.display = '';
+    resumenAllPagadores = pagadores;
+    resumenAllCats = cats;
     buildMultiselect('pagador', pagadores, p => p);
     buildMultiselect('cat', cats, c => `${CAT_ICONS[c] || ''} ${c}`);
   } else {
@@ -894,31 +921,56 @@ async function renderResumen() {
 
 function buildMultiselect(type, options, labelFn) {
   const drop = document.getElementById(`ms-${type}-drop`);
-  drop.innerHTML = options.map(o => `
-    <div class="ms-option" id="msopt-${type}-${o.replace(/ /g,'_')}" onclick="toggleMsOption('${type}','${o}')">
-      <div class="ms-check">✓</div>
-      <span>${labelFn(o)}</span>
-    </div>
-  `).join('');
+  drop.innerHTML = options.map(o => {
+    const id = o.replace(/ /g,'_');
+    return `
+      <div class="ms-option checked" id="msopt-${type}-${id}">
+        <div class="ms-check" onclick="toggleMsOption('${type}','${o}')">✓</div>
+        <div class="ms-label" onclick="onlyMsOption('${type}','${o}')">
+          ${labelFn(o)}
+          <span class="ms-only">solo</span>
+        </div>
+      </div>`;
+  }).join('');
   updateMsLabel(type);
 }
 
 function toggleMsOption(type, value) {
-  const arr = type === 'cat' ? resumenFilterCats : resumenFilterPagadores;
-  const idx = arr.indexOf(value);
-  if (idx > -1) arr.splice(idx, 1); else arr.push(value);
+  const excluded = type === 'cat' ? resumenExcludedCats : resumenExcludedPagadores;
+  if (excluded.has(value)) excluded.delete(value); else excluded.add(value);
   const el = document.getElementById(`msopt-${type}-${value.replace(/ /g,'_')}`);
-  el?.classList.toggle('checked', arr.includes(value));
+  el?.classList.toggle('checked', !excluded.has(value));
+  el?.classList.toggle('unchecked', excluded.has(value));
+  updateMsLabel(type);
+  paintResumen();
+}
+
+function onlyMsOption(type, value) {
+  const excluded = type === 'cat' ? resumenExcludedCats : resumenExcludedPagadores;
+  const all = type === 'cat' ? resumenAllCats : resumenAllPagadores;
+  excluded.clear();
+  all.forEach(o => {
+    const el = document.getElementById(`msopt-${type}-${o.replace(/ /g,'_')}`);
+    if (o !== value) {
+      excluded.add(o);
+      el?.classList.remove('checked');
+      el?.classList.add('unchecked');
+    } else {
+      el?.classList.add('checked');
+      el?.classList.remove('unchecked');
+    }
+  });
   updateMsLabel(type);
   paintResumen();
 }
 
 function updateMsLabel(type) {
-  const arr = type === 'cat' ? resumenFilterCats : resumenFilterPagadores;
+  const excluded = type === 'cat' ? resumenExcludedCats : resumenExcludedPagadores;
   const label = document.getElementById(`ms-${type}-label`);
   const btn = document.getElementById(`ms-${type}-btn`);
-  label.textContent = arr.length ? arr.map(v => type === 'cat' ? v : v).join(', ') : (type === 'cat' ? 'Categoría' : 'Pagador');
-  btn.classList.toggle('active', arr.length > 0);
+  const defaultLabel = type === 'cat' ? 'Categoría' : 'Pagador';
+  label.textContent = excluded.size ? defaultLabel + ` (${excluded.size} ocultos)` : defaultLabel;
+  btn.classList.toggle('active', excluded.size > 0);
 }
 
 function toggleMultiselect(type) {
@@ -948,10 +1000,10 @@ function paintResumen() {
     return;
   }
 
-  // Aplicar filtros
+  // Aplicar filtros (excluir los desmarcados)
   let mes = resumenMesData;
-  if (resumenFilterPagadores.length) mes = mes.filter(g => resumenFilterPagadores.includes(g.paidBy));
-  if (resumenFilterCats.length)      mes = mes.filter(g => resumenFilterCats.includes(g.category));
+  if (resumenExcludedPagadores.size) mes = mes.filter(g => !resumenExcludedPagadores.has(g.paidBy));
+  if (resumenExcludedCats.size)      mes = mes.filter(g => !resumenExcludedCats.has(g.category));
 
   // ── Totales ──────────────────────────────────────────────
   const soloGastos = mes.filter(g => parseFloat(g.amount) < 0);
@@ -975,7 +1027,7 @@ function paintResumen() {
 
   // Solo calcular deuda cuando no hay filtros activos (para que tenga sentido)
   let deudaHTML = '';
-  if (!resumenFilterPagadores.length && !resumenFilterCats.length) {
+  if (!resumenExcludedPagadores.size && !resumenExcludedCats.size) {
     const comunesMarin   = soloGastos.filter(g => g.paidBy === 'Marin'   && g.common === 'Sí').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
     const comunesViboras = soloGastos.filter(g => g.paidBy === 'Viboras' && g.common === 'Sí').reduce((s,g) => s + Math.abs(parseFloat(g.amount)||0), 0);
     const deudaNeta = comunesMarin - (comunesMarin + comunesViboras) / 2;
@@ -986,7 +1038,7 @@ function paintResumen() {
     deudaHTML = `<div class="balance-deuda">${deudaTexto}</div>`;
   }
 
-  const activeFiltro = resumenFilterPagadores.length || resumenFilterCats.length
+  const activeFiltro = resumenExcludedPagadores.size || resumenExcludedCats.size
     ? `<div style="font-size:12px;color:var(--text3);margin-top:-4px;margin-bottom:12px;">Filtrado · <span style="color:var(--accent);cursor:pointer" onclick="clearResumenFilters()">Quitar filtros</span></div>`
     : '';
 
@@ -1038,9 +1090,12 @@ function paintResumen() {
 }
 
 function clearResumenFilters() {
-  resumenFilterCats = [];
-  resumenFilterPagadores = [];
-  document.querySelectorAll('.ms-option').forEach(el => el.classList.remove('checked'));
+  resumenExcludedCats = new Set();
+  resumenExcludedPagadores = new Set();
+  document.querySelectorAll('.ms-option').forEach(el => {
+    el.classList.add('checked');
+    el.classList.remove('unchecked');
+  });
   updateMsLabel('cat');
   updateMsLabel('pagador');
   paintResumen();
