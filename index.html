@@ -559,6 +559,10 @@
 
   <!-- TAB: HISTORIAL -->
   <div id="view-historial" style="display:none">
+    <div style="margin-bottom: 12px; position: relative;">
+      <span style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:15px; pointer-events:none;">🔍</span>
+      <input class="text-input" type="search" id="historial-search" placeholder="Buscar por categoría o descripción…" oninput="filterHistorial()" style="padding-left: 40px;">
+    </div>
     <div id="historial-content"></div>
   </div>
 
@@ -894,15 +898,35 @@ async function renderResumen() {
   `;
 }
 
+let historialData = [];
+
 async function renderHistorial() {
   const container = document.getElementById('historial-content');
   container.innerHTML = '<div class="empty-state">Cargando…</div>';
 
   const fromSheets = await fetchGastosFromSheets();
-  let data = fromSheets || gastos;
+  historialData = (fromSheets || gastos).slice().sort((a, b) => {
+    return (b.date || '').localeCompare(a.date || '');
+  });
 
+  document.getElementById('historial-search').value = '';
+  paintHistorial(historialData);
+}
+
+function filterHistorial() {
+  const q = document.getElementById('historial-search').value.toLowerCase().trim();
+  if (!q) return paintHistorial(historialData);
+  const filtered = historialData.filter(g =>
+    (g.category || '').toLowerCase().includes(q) ||
+    (g.subcategory || '').toLowerCase().includes(q)
+  );
+  paintHistorial(filtered);
+}
+
+function paintHistorial(data) {
+  const container = document.getElementById('historial-content');
   if (!data.length) {
-    container.innerHTML = '<div class="empty-state">Todavía no hay gastos guardados 🙂</div>';
+    container.innerHTML = '<div class="empty-state">No hay resultados 🙂</div>';
     return;
   }
   const byMonth = {};
@@ -916,7 +940,7 @@ async function renderHistorial() {
   container.innerHTML = months.map(m => {
     const [y, mo] = m.split('-');
     const label = mo ? `${monthNames[parseInt(mo)-1]} ${y}` : m;
-    const items = byMonth[m];
+    const items = byMonth[m]; // ya vienen ordenados por fecha desc
     const total = items.reduce((s,g) => s + (parseFloat(g.amount)||0), 0);
     return `
       <div class="month-section">
