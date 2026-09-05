@@ -2,47 +2,77 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Aplica el tema guardado antes de pintar, para que no haya parpadeo
+  // claro→oscuro al abrir la app si ya se eligió un tema manualmente.
+  (function () {
+    const stored = localStorage.getItem('gastos_theme');
+    if (stored) document.documentElement.setAttribute('data-theme', stored);
+  })();
+</script>
 <link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Gastos</title>
 <style>
   :root {
-    --bg: #F7F5F0;
-    --surface: #FFFFFF;
-    --surface2: #F0EDE8;
-    --text: #1A1916;
-    --text2: #6B6860;
-    --text3: #A8A69F;
-    --accent: #1D9E75;
-    --accent-light: #E1F5EE;
-    --accent-dark: #0F6E56;
-    --danger: #D85A30;
-    --danger-light: #FAECE7;
-    --border: rgba(26,25,22,0.1);
-    --border2: rgba(26,25,22,0.06);
+    --bg: #F9F5EB;
+    --surface: #F9F5EB;
+    --surface2: #2D4059;
+    --surface2-text: #F9F5EB;
+    --text: #2D4059;
+    --text2: #4C5B6F;
+    --text3: #606D7E;
+    --income: #1DA35F;
+    --expense: #EA5455;
+    --select: #F3AF30;
+    --select-text: #2D4059;
+    --card-border: #FFFFFF;
+    --border: rgba(45,64,89,0.12);
+    --border2: rgba(45,64,89,0.07);
     --radius: 16px;
     --radius-sm: 10px;
+    --radius-pill: 999px;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1A1916;
-      --surface: #242220;
-      --surface2: #2C2C2A;
-      --text: #F0EDE8;
-      --text2: #A8A69F;
-      --text3: #6B6860;
-      --accent: #1D9E75;
-      --accent-light: #04342C;
-      --accent-dark: #9FE1CB;
-      --danger: #F0997B;
-      --danger-light: #4A1B0C;
-      --border: rgba(240,237,232,0.1);
-      --border2: rgba(240,237,232,0.06);
+    :root:not([data-theme="light"]) {
+      --bg: #2D4059;
+      --surface: #46576D;
+      --surface2: #5B6A7E;
+      --surface2-text: #F9F5EB;
+      --text: #F9F5EB;
+      --text2: #B2B6B8;
+      --text3: #7F8893;
+      --income: #34D399;
+      --expense: #EA5455;
+      --select: #F9F5EB;
+      --select-text: #2D4059;
+      --card-border: var(--border);
+      --border: rgba(249,245,235,0.14);
+      --border2: rgba(249,245,235,0.08);
     }
+  }
+  :root[data-theme="dark"] {
+    --bg: #2D4059;
+    --surface: #46576D;
+    --surface2: #5B6A7E;
+    --surface2-text: #F9F5EB;
+    --text: #F9F5EB;
+    --text2: #B2B6B8;
+    --text3: #7F8893;
+    --income: #34D399;
+    --expense: #EA5455;
+    --select: #F9F5EB;
+    --select-text: #2D4059;
+    --card-border: var(--border);
+    --border: rgba(249,245,235,0.14);
+    --border2: rgba(249,245,235,0.08);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
-    font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    font-family: 'Manrope', -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -68,17 +98,24 @@
     font-weight: 700;
     letter-spacing: -0.5px;
     color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .app-subtitle { font-size: 13px; color: var(--text3); margin-top: 2px; }
-  .config-btn {
+  .title-icon { width: 24px; height: 24px; flex-shrink: 0; }
+  .theme-btn {
     width: 36px; height: 36px;
     border-radius: 50%;
     background: var(--surface2);
     border: none;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
+    color: var(--surface2-text);
+    flex-shrink: 0;
   }
+  .theme-btn svg { width: 18px; height: 18px; }
+  .ic { width: 1em; height: 1em; vertical-align: -0.125em; flex-shrink: 0; }
+  .app-subtitle { font-size: 13px; color: var(--text3); margin-top: 2px; }
   .tabs {
     display: flex;
     background: var(--surface2);
@@ -94,7 +131,7 @@
     background: none;
     font-size: 13px;
     font-weight: 500;
-    color: var(--text2);
+    color: var(--surface2-text);
     cursor: pointer;
     transition: all 0.15s;
   }
@@ -108,6 +145,7 @@
   /* FORM */
   .form-card {
     background: var(--surface);
+    border: 1px solid var(--card-border);
     border-radius: var(--radius);
     padding: 20px;
     margin-bottom: 12px;
@@ -138,7 +176,7 @@
     display: flex;
     align-items: baseline;
     gap: 4px;
-    border-bottom: 2px solid var(--accent);
+    border-bottom: 2px solid var(--text);
     padding-bottom: 8px;
     margin-bottom: 4px;
   }
@@ -152,14 +190,15 @@
     background: var(--surface2);
     border: 1.5px solid transparent;
     font-size: 15px;
-    color: var(--text);
+    color: var(--surface2-text);
     outline: none;
     appearance: none;
     -webkit-appearance: none;
     transition: border-color 0.15s;
     font-family: inherit;
   }
-  .select-input:focus, .text-input:focus { border-color: var(--accent); }
+  .select-input:focus, .text-input:focus { border-color: var(--select); }
+  .text-input::placeholder { color: var(--surface2-text); opacity: 0.65; }
   .select-wrapper { position: relative; }
   .select-wrapper::after {
     content: '▾';
@@ -167,7 +206,7 @@
     right: 14px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--text3);
+    color: var(--surface2-text);
     pointer-events: none;
     font-size: 12px;
   }
@@ -183,15 +222,15 @@
     background: var(--surface2);
     font-size: 13px;
     font-weight: 500;
-    color: var(--text2);
+    color: var(--surface2-text);
     cursor: pointer;
     transition: all 0.12s;
     user-select: none;
   }
   .pill.selected {
-    background: var(--accent-light);
-    border-color: var(--accent);
-    color: var(--accent-dark);
+    background: var(--select);
+    border-color: var(--select);
+    color: var(--select-text);
   }
   .date-row {
     display: flex;
@@ -204,18 +243,18 @@
     background: var(--surface2);
     border: 1.5px solid transparent;
     font-size: 15px;
-    color: var(--text);
+    color: var(--surface2-text);
     outline: none;
     font-family: inherit;
   }
-  .date-row input:focus { border-color: var(--accent); }
+  .date-row input:focus { border-color: var(--select); }
 
   .submit-btn {
     width: 100%;
     padding: 16px;
-    border-radius: var(--radius);
-    background: var(--accent);
-    color: white;
+    border-radius: var(--radius-pill);
+    background: var(--select);
+    color: var(--select-text);
     border: none;
     font-size: 16px;
     font-weight: 600;
@@ -224,7 +263,7 @@
     letter-spacing: -0.2px;
     margin-top: 4px;
   }
-  .submit-btn:active { transform: scale(0.98); background: var(--accent-dark); }
+  .submit-btn:active { transform: scale(0.98); opacity: 0.85; }
   .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* TOAST */
@@ -246,7 +285,7 @@
     z-index: 100;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.error { background: var(--danger); color: white; }
+  .toast.error { background: var(--expense); color: white; }
 
   /* HISTORY */
   .month-section { margin-bottom: 24px; }
@@ -260,6 +299,7 @@
   }
   .expense-item {
     background: var(--surface);
+    border: 1px solid var(--card-border);
     border-radius: var(--radius-sm);
     padding: 14px 16px;
     display: flex;
@@ -271,6 +311,7 @@
     width: 40px; height: 40px;
     border-radius: 12px;
     background: var(--surface2);
+    color: var(--surface2-text);
     display: flex; align-items: center; justify-content: center;
     font-size: 18px;
     flex-shrink: 0;
@@ -278,8 +319,8 @@
   .expense-info { flex: 1; min-width: 0; }
   .expense-cat { font-size: 14px; font-weight: 600; color: var(--text); }
   .expense-sub { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
-  .expense-amount { font-size: 16px; font-weight: 700; color: var(--danger); flex-shrink: 0; }
-  .expense-amount.income { color: var(--accent); }
+  .expense-amount { font-size: 16px; font-weight: 700; color: var(--expense); flex-shrink: 0; }
+  .expense-amount.income { color: var(--income); }
   .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 15px; }
 
   /* CONFIG */
@@ -299,13 +340,13 @@
     outline: none;
     font-family: 'SF Mono', monospace;
   }
-  .config-input:focus { border-color: var(--accent); }
+  .config-input:focus { border-color: var(--text); }
   .save-btn {
     width: 100%;
     padding: 13px;
-    border-radius: var(--radius-sm);
-    background: var(--accent);
-    color: white;
+    border-radius: var(--radius-pill);
+    background: var(--select);
+    color: var(--select-text);
     border: none;
     font-size: 14px;
     font-weight: 600;
@@ -313,6 +354,7 @@
   }
   .step-card {
     background: var(--surface);
+    border: 1px solid var(--card-border);
     border-radius: var(--radius);
     padding: 18px;
     margin-bottom: 10px;
@@ -320,8 +362,8 @@
   .step-num {
     width: 24px; height: 24px;
     border-radius: 50%;
-    background: var(--accent-light);
-    color: var(--accent-dark);
+    background: var(--surface2);
+    color: var(--surface2-text);
     font-size: 12px;
     font-weight: 700;
     display: flex; align-items: center; justify-content: center;
@@ -335,12 +377,12 @@
     padding: 10px 12px;
     font-family: 'SF Mono', monospace;
     font-size: 11px;
-    color: var(--text2);
+    color: var(--surface2-text);
     margin-top: 8px;
     word-break: break-all;
     line-height: 1.5;
   }
-  a { color: var(--accent); }
+  a { color: var(--text); text-decoration: underline; }
 
   /* MULTISELECT */
   .multiselect-btn {
@@ -350,7 +392,7 @@
     background: var(--surface2);
     border: 1.5px solid transparent;
     font-size: 13px;
-    color: var(--text);
+    color: var(--surface2-text);
     cursor: pointer;
     display: flex;
     justify-content: space-between;
@@ -358,15 +400,15 @@
     font-family: inherit;
     transition: border-color 0.15s;
   }
-  .multiselect-btn.active { border-color: var(--accent); }
-  .ms-arrow { color: var(--text3); font-size: 11px; margin-left: 4px; flex-shrink: 0; }
+  .multiselect-btn.active { border-color: var(--select); }
+  .ms-arrow { color: var(--surface2-text); font-size: 11px; margin-left: 4px; flex-shrink: 0; }
   .multiselect-dropdown {
     display: none;
     position: absolute;
     top: calc(100% + 4px);
     left: 0; right: 0;
     background: var(--surface);
-    border: 1.5px solid var(--border);
+    border: 1.5px solid var(--card-border);
     border-radius: var(--radius-sm);
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
     z-index: 50;
@@ -397,9 +439,9 @@
     transition: all 0.12s;
   }
   .ms-option.checked .ms-check {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
+    background: var(--select);
+    border-color: var(--select);
+    color: var(--select-text);
   }
   .ms-option.unchecked .ms-check {
     background: var(--surface2);
@@ -418,7 +460,7 @@
     transform: translateY(-50%);
     font-size: 11px;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--text);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s;
@@ -436,7 +478,7 @@
     margin-bottom: 16px;
   }
   .resumen-total-card {
-    background: var(--accent);
+    background: var(--select);
     border-radius: var(--radius);
     padding: 22px 20px;
     margin-bottom: 12px;
@@ -444,9 +486,9 @@
     justify-content: space-between;
     align-items: center;
   }
-  .resumen-total-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75); }
-  .resumen-total-amount { font-size: 32px; font-weight: 800; color: white; letter-spacing: -1px; }
-  .resumen-total-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .resumen-total-label { font-size: 13px; font-weight: 600; color: color-mix(in srgb, var(--select-text) 75%, transparent); }
+  .resumen-total-amount { font-size: 32px; font-weight: 800; color: var(--select-text); letter-spacing: -1px; }
+  .resumen-total-sub { font-size: 12px; color: color-mix(in srgb, var(--select-text) 60%, transparent); margin-top: 2px; }
 
   .resumen-section-title {
     font-size: 11px;
@@ -459,6 +501,7 @@
 
   .resumen-card {
     background: var(--surface);
+    border: 1px solid var(--card-border);
     border-radius: var(--radius);
     padding: 16px 18px;
     margin-bottom: 10px;
@@ -475,17 +518,17 @@
   .balance-row:first-child { padding-top: 0; }
   .balance-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
   .balance-amount { font-size: 16px; font-weight: 700; }
-  .balance-amount.gasto { color: var(--danger); }
-  .balance-amount.ingreso { color: var(--accent); }
+  .balance-amount.gasto { color: var(--expense); }
+  .balance-amount.ingreso { color: var(--income); }
   .balance-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
 
   .balance-deuda {
-    background: var(--accent-light);
+    background: var(--surface2);
     border-radius: var(--radius-sm);
     padding: 12px 16px;
     margin-top: 10px;
     font-size: 13px;
-    color: var(--accent-dark);
+    color: var(--surface2-text);
     font-weight: 500;
     line-height: 1.5;
     text-align: center;
@@ -504,6 +547,7 @@
     width: 32px; height: 32px;
     border-radius: 9px;
     background: var(--surface2);
+    color: var(--surface2-text);
     display: flex; align-items: center; justify-content: center;
     font-size: 15px;
     flex-shrink: 0;
@@ -517,8 +561,8 @@
     margin-top: 4px;
     overflow: hidden;
   }
-  .cat-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
-  .cat-amount { font-size: 14px; font-weight: 700; color: var(--danger); flex-shrink: 0; }
+  .cat-bar { height: 100%; background: var(--select); border-radius: 2px; transition: width 0.4s ease; }
+  .cat-amount { font-size: 14px; font-weight: 700; color: var(--expense); flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -526,10 +570,13 @@
 <div class="header">
   <div class="header-top">
     <div>
-      <div class="app-title">Gastos 💸</div>
+      <div class="app-title">
+        Gastos
+        <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,64H56a8,8,0,0,1,0-16H192a8,8,0,0,0,0-16H56A24,24,0,0,0,32,56V184a24,24,0,0,0,24,24H216a16,16,0,0,0,16-16V80A16,16,0,0,0,216,64Zm0,128H56a8,8,0,0,1-8-8V78.63A23.84,23.84,0,0,0,56,80H216Zm-48-60a12,12,0,1,1,12,12A12,12,0,0,1,168,132Z"/></svg>
+      </div>
       <div class="app-subtitle" id="header-subtitle">Cargando…</div>
     </div>
-    <button class="config-btn" onclick="showTab('config')" title="Configuración">⚙️</button>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema"></button>
   </div>
   <div class="tabs">
     <button class="tab active" id="tab-nuevo" onclick="showTab('nuevo')">Nuevo</button>
@@ -556,7 +603,7 @@
         <label class="form-label">Fecha</label>
         <div class="date-row">
           <input type="date" id="date">
-          <button onclick="setToday()" style="padding: 12px 14px; border-radius: 10px; background: var(--surface2); border: none; font-size: 13px; color: var(--text2); cursor: pointer; white-space: nowrap;">Hoy</button>
+          <button onclick="setToday()" style="padding: 12px 14px; border-radius: 10px; background: var(--surface2); border: none; font-size: 13px; color: var(--surface2-text); cursor: pointer; white-space: nowrap;">Hoy</button>
         </div>
       </div>
 
@@ -714,13 +761,49 @@
 <script>
 const STORAGE_KEY = 'gastos_local';
 const CONFIG_KEY = 'gastos_config';
+const THEME_KEY = 'gastos_theme';
 
+const SUN_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-16,0a48,48,0,1,0-48,48A48.05,48.05,0,0,0,176,128ZM58.34,69.66A8,8,0,0,0,69.66,58.34l-16-16A8,8,0,0,0,42.34,53.66Zm0,116.68-16,16a8,8,0,0,0,11.32,11.32l16-16a8,8,0,0,0-11.32-11.32ZM192,72a8,8,0,0,0,5.66-2.34l16-16a8,8,0,0,0-11.32-11.32l-16,16A8,8,0,0,0,192,72Zm5.66,114.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32-11.32ZM48,128a8,8,0,0,0-8-8H16a8,8,0,0,0,0,16H40A8,8,0,0,0,48,128Zm80,80a8,8,0,0,0-8,8v24a8,8,0,0,0,16,0V216A8,8,0,0,0,128,208Zm112-88H216a8,8,0,0,0,0,16h24a8,8,0,0,0,0-16Z"/></svg>';
+const MOON_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160a106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>';
+
+// Tema: sigue las preferencias del sistema por defecto; si la usuaria toca
+// el botón, esa elección manda a partir de ahí (guardada en localStorage).
+function isDarkActive() {
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored) return stored === 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function paintThemeButton() {
+  document.getElementById('theme-btn').innerHTML = isDarkActive() ? MOON_ICON : SUN_ICON;
+}
+
+function toggleTheme() {
+  const next = isDarkActive() ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, next);
+  document.documentElement.setAttribute('data-theme', next);
+  paintThemeButton();
+}
+
+// Iconos de Phosphor (phosphoricons.com, MIT) en línea, peso "regular".
+const icon = path => `<svg class="ic" viewBox="0 0 256 256" fill="currentColor"><path d="${path}"/></svg>`;
 const CAT_ICONS = {
-  'Bizum': '💸', 'Casa': '🏠', 'Compra': '🛒', 'Cultura': '🎭',
-  'Deporte': '🏃', 'Donacion': '❤️', 'Gato': '🐱', 'Health': '💊',
-  'Nomina': '💰', 'Ocio gastronómico': '🍽️', 'Proyectos': '🔨',
-  'Regalo': '🎁', 'Ropa': '👕', 'Suscripciones': '📱',
-  'Transporte': '🚇', 'Viaje': '✈️'
+  'Bizum': icon('M213.66,181.66l-32,32a8,8,0,0,1-11.32-11.32L188.69,184H48a8,8,0,0,1,0-16H188.69l-18.35-18.34a8,8,0,0,1,11.32-11.32l32,32A8,8,0,0,1,213.66,181.66Zm-139.32-64a8,8,0,0,0,11.32-11.32L67.31,88H208a8,8,0,0,0,0-16H67.31L85.66,53.66A8,8,0,0,0,74.34,42.34l-32,32a8,8,0,0,0,0,11.32Z'),
+  'Casa': icon('M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z'),
+  'Compra': icon('M230.14,58.87A8,8,0,0,0,224,56H62.68L56.6,22.57A8,8,0,0,0,48.73,16H24a8,8,0,0,0,0,16h18L67.56,172.29a24,24,0,0,0,5.33,11.27,28,28,0,1,0,44.4,8.44h45.42A27.75,27.75,0,0,0,160,204a28,28,0,1,0,28-28H91.17a8,8,0,0,1-7.87-6.57L80.13,152h116a24,24,0,0,0,23.61-19.71l12.16-66.86A8,8,0,0,0,230.14,58.87ZM104,204a12,12,0,1,1-12-12A12,12,0,0,1,104,204Zm96,0a12,12,0,1,1-12-12A12,12,0,0,1,200,204Zm4-74.57A8,8,0,0,1,196.1,136H77.22L65.59,72H214.41Z'),
+  'Cultura': icon('M232,104a8,8,0,0,0,8-8V64a16,16,0,0,0-16-16H32A16,16,0,0,0,16,64V96a8,8,0,0,0,8,8,24,24,0,0,1,0,48,8,8,0,0,0-8,8v32a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V160a8,8,0,0,0-8-8,24,24,0,0,1,0-48ZM32,167.2a40,40,0,0,0,0-78.4V64H88V192H32Zm192,0V192H104V64H224V88.8a40,40,0,0,0,0,78.4Z'),
+  'Deporte': icon('M248,120h-8V88a16,16,0,0,0-16-16H208V64a16,16,0,0,0-16-16H168a16,16,0,0,0-16,16v56H104V64A16,16,0,0,0,88,48H64A16,16,0,0,0,48,64v8H32A16,16,0,0,0,16,88v32H8a8,8,0,0,0,0,16h8v32a16,16,0,0,0,16,16H48v8a16,16,0,0,0,16,16H88a16,16,0,0,0,16-16V136h48v56a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16v-8h16a16,16,0,0,0,16-16V136h8a8,8,0,0,0,0-16ZM32,168V88H48v80Zm56,24H64V64H88V192Zm104,0H168V64h24V175.82c0,.06,0,.12,0,.18s0,.12,0,.18V192Zm32-24H208V88h16Z'),
+  'Donacion': icon('M230.33,141.06a24.34,24.34,0,0,0-18.61-4.77C230.5,117.33,240,98.48,240,80c0-26.47-21.29-48-47.46-48A47.58,47.58,0,0,0,156,48.75,47.58,47.58,0,0,0,119.46,32C93.29,32,72,53.53,72,80c0,11,3.24,21.69,10.06,33a31.87,31.87,0,0,0-14.75,8.4L44.69,144H16A16,16,0,0,0,0,160v40a16,16,0,0,0,16,16H120a7.93,7.93,0,0,0,1.94-.24l64-16a6.94,6.94,0,0,0,1.19-.4L226,182.82l.44-.2a24.6,24.6,0,0,0,3.93-41.56ZM119.46,48A31.15,31.15,0,0,1,148.6,67a8,8,0,0,0,14.8,0,31.15,31.15,0,0,1,29.14-19C209.59,48,224,62.65,224,80c0,19.51-15.79,41.58-45.66,63.9l-11.09,2.55A28,28,0,0,0,140,112H100.68C92.05,100.36,88,90.12,88,80,88,62.65,102.41,48,119.46,48ZM16,160H40v40H16Zm203.43,8.21-38,16.18L119,200H56V155.31l22.63-22.62A15.86,15.86,0,0,1,89.94,128H140a12,12,0,0,1,0,24H112a8,8,0,0,0,0,16h32a8.32,8.32,0,0,0,1.79-.2l67-15.41.31-.08a8.6,8.6,0,0,1,6.3,15.9Z'),
+  'Gato': icon('M96,140a12,12,0,1,1-12-12A12,12,0,0,1,96,140Zm76-12a12,12,0,1,0,12,12A12,12,0,0,0,172,128Zm60-80v88c0,52.93-46.65,96-104,96S24,188.93,24,136V48A16,16,0,0,1,51.31,36.69c.14.14.26.27.38.41L69,57a111.22,111.22,0,0,1,118.1,0L204.31,37.1c.12-.14.24-.27.38-.41A16,16,0,0,1,232,48Zm-16,0-21.56,24.8A8,8,0,0,1,183.63,74,88.86,88.86,0,0,0,168,64.75V88a8,8,0,1,1-16,0V59.05a97.43,97.43,0,0,0-16-2.72V88a8,8,0,1,1-16,0V56.33a97.43,97.43,0,0,0-16,2.72V88a8,8,0,1,1-16,0V64.75A88.86,88.86,0,0,0,72.37,74a8,8,0,0,1-10.81-1.17L40,48v88c0,41.66,35.21,76,80,79.67V195.31l-13.66-13.66a8,8,0,0,1,11.32-11.31L128,180.68l10.34-10.34a8,8,0,0,1,11.32,11.31L136,195.31v20.36c44.79-3.69,80-38,80-79.67Z'),
+  'Health': icon('M216,56H176V48a24,24,0,0,0-24-24H104A24,24,0,0,0,80,48v8H40A16,16,0,0,0,24,72V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V72A16,16,0,0,0,216,56ZM96,48a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96ZM216,200H40V72H216V200Zm-56-64a8,8,0,0,1-8,8H136v16a8,8,0,0,1-16,0V144H104a8,8,0,0,1,0-16h16V112a8,8,0,0,1,16,0v16h16A8,8,0,0,1,160,136Z'),
+  'Nomina': icon('M128,88a40,40,0,1,0,40,40A40,40,0,0,0,128,88Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,152ZM240,56H16a8,8,0,0,0-8,8V192a8,8,0,0,0,8,8H240a8,8,0,0,0,8-8V64A8,8,0,0,0,240,56ZM193.65,184H62.35A56.78,56.78,0,0,0,24,145.65v-35.3A56.78,56.78,0,0,0,62.35,72h131.3A56.78,56.78,0,0,0,232,110.35v35.3A56.78,56.78,0,0,0,193.65,184ZM232,93.37A40.81,40.81,0,0,1,210.63,72H232ZM45.37,72A40.81,40.81,0,0,1,24,93.37V72ZM24,162.63A40.81,40.81,0,0,1,45.37,184H24ZM210.63,184A40.81,40.81,0,0,1,232,162.63V184Z'),
+  'Ocio gastronómico': icon('M72,88V40a8,8,0,0,1,16,0V88a8,8,0,0,1-16,0ZM216,40V224a8,8,0,0,1-16,0V176H152a8,8,0,0,1-8-8,268.75,268.75,0,0,1,7.22-56.88c9.78-40.49,28.32-67.63,53.63-78.47A8,8,0,0,1,216,40ZM200,53.9c-32.17,24.57-38.47,84.42-39.7,106.1H200ZM119.89,38.69a8,8,0,1,0-15.78,2.63L112,88.63a32,32,0,0,1-64,0l7.88-47.31a8,8,0,1,0-15.78-2.63l-8,48A8.17,8.17,0,0,0,32,88a48.07,48.07,0,0,0,40,47.32V224a8,8,0,0,0,16,0V135.32A48.07,48.07,0,0,0,128,88a8.17,8.17,0,0,0-.11-1.31Z'),
+  'Proyectos': icon('M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z'),
+  'Regalo': icon('M216,72H180.92c.39-.33.79-.65,1.17-1A29.53,29.53,0,0,0,192,49.57,32.62,32.62,0,0,0,158.44,16,29.53,29.53,0,0,0,137,25.91a54.94,54.94,0,0,0-9,14.48,54.94,54.94,0,0,0-9-14.48A29.53,29.53,0,0,0,97.56,16,32.62,32.62,0,0,0,64,49.57,29.53,29.53,0,0,0,73.91,71c.38.33.78.65,1.17,1H40A16,16,0,0,0,24,88v32a16,16,0,0,0,16,16v64a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V136a16,16,0,0,0,16-16V88A16,16,0,0,0,216,72ZM149,36.51a13.69,13.69,0,0,1,10-4.5h.49A16.62,16.62,0,0,1,176,49.08a13.69,13.69,0,0,1-4.5,10c-9.49,8.4-25.24,11.36-35,12.4C137.7,60.89,141,45.5,149,36.51Zm-64.09.36A16.63,16.63,0,0,1,96.59,32h.49a13.69,13.69,0,0,1,10,4.5c8.39,9.48,11.35,25.2,12.39,34.92-9.72-1-25.44-4-34.92-12.39a13.69,13.69,0,0,1-4.5-10A16.6,16.6,0,0,1,84.87,36.87ZM40,88h80v32H40Zm16,48h64v64H56Zm144,64H136V136h64Zm16-80H136V88h80v32Z'),
+  'Ropa': icon('M247.59,61.22,195.83,33A8,8,0,0,0,192,32H160a8,8,0,0,0-8,8,24,24,0,0,1-48,0,8,8,0,0,0-8-8H64a8,8,0,0,0-3.84,1L8.41,61.22A15.76,15.76,0,0,0,1.82,82.48l19.27,36.81A16.37,16.37,0,0,0,35.67,128H56v80a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V128h20.34a16.37,16.37,0,0,0,14.58-8.71l19.27-36.81A15.76,15.76,0,0,0,247.59,61.22ZM35.67,112a.62.62,0,0,1-.41-.13L16.09,75.26,56,53.48V112ZM184,208H72V48h16.8a40,40,0,0,0,78.38,0H184Zm36.75-96.14a.55.55,0,0,1-.41.14H200V53.48l39.92,21.78Z'),
+  'Suscripciones': icon('M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z'),
+  'Transporte': icon('M240,104H229.2L201.42,41.5A16,16,0,0,0,186.8,32H69.2a16,16,0,0,0-14.62,9.5L26.8,104H16a8,8,0,0,0,0,16h8v80a16,16,0,0,0,16,16H64a16,16,0,0,0,16-16V184h96v16a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16V120h8a8,8,0,0,0,0-16ZM69.2,48H186.8l24.89,56H44.31ZM64,200H40V184H64Zm128,0V184h24v16Zm24-32H40V120H216ZM56,144a8,8,0,0,1,8-8H80a8,8,0,0,1,0,16H64A8,8,0,0,1,56,144Zm112,0a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H176A8,8,0,0,1,168,144Z'),
+  'Viaje': icon('M235.58,128.84,160,91.06V48a32,32,0,0,0-64,0V91.06L20.42,128.84A8,8,0,0,0,16,136v32a8,8,0,0,0,9.57,7.84L96,161.76v18.93L82.34,194.34A8,8,0,0,0,80,200v32a8,8,0,0,0,11,7.43l37-14.81,37,14.81A8,8,0,0,0,176,232V200a8,8,0,0,0-2.34-5.66L160,180.69V161.76l70.43,14.08A8,8,0,0,0,240,168V136A8,8,0,0,0,235.58,128.84ZM224,158.24l-70.43-14.08A8,8,0,0,0,144,152v32a8,8,0,0,0,2.34,5.66L160,203.31v16.87l-29-11.61a8,8,0,0,0-5.94,0L96,220.18V203.31l13.66-13.65A8,8,0,0,0,112,184V152a8,8,0,0,0-9.57-7.84L32,158.24v-17.3l75.58-37.78A8,8,0,0,0,112,96V48a16,16,0,0,1,32,0V96a8,8,0,0,0,4.42,7.16L224,140.94Z')
 };
 
 let selectedCommon = 'Sí';
@@ -732,6 +815,7 @@ function init() {
   setToday();
   document.getElementById('script-url').value = config.scriptUrl || '';
   updateSubtitle();
+  paintThemeButton();
   syncFromSheets();
 
   document.addEventListener('visibilitychange', () => {
@@ -1079,7 +1163,7 @@ function paintResumen() {
   }
 
   const activeFiltro = resumenExcludedPagadores.size || resumenExcludedCats.size
-    ? `<div style="font-size:12px;color:var(--text3);margin-top:-4px;margin-bottom:12px;">Filtrado · <span style="color:var(--accent);cursor:pointer" onclick="clearResumenFilters()">Quitar filtros</span></div>`
+    ? `<div style="font-size:12px;color:var(--text3);margin-top:-4px;margin-bottom:12px;">Filtrado · <span style="color:var(--text);text-decoration:underline;cursor:pointer" onclick="clearResumenFilters()">Quitar filtros</span></div>`
     : '';
 
   container.innerHTML = `
@@ -1115,7 +1199,7 @@ function paintResumen() {
     <div class="resumen-card">
       ${catsSorted.length ? catsSorted.map(([cat, total]) => `
         <div class="cat-row">
-          <div class="cat-icon-sm">${CAT_ICONS[cat] || '💳'}</div>
+          <div class="cat-icon-sm">${CAT_ICONS[cat] || icon('M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,16V88H32V64Zm0,128H32V104H224v88Zm-16-24a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h32A8,8,0,0,1,208,168Zm-64,0a8,8,0,0,1-8,8H120a8,8,0,0,1,0-16h16A8,8,0,0,1,144,168Z')}</div>
           <div class="cat-info">
             <div class="cat-name">${cat}</div>
             <div class="cat-bar-wrap">
@@ -1189,7 +1273,7 @@ function paintHistorial(data) {
         <div class="month-label">${label} · ${total.toFixed(2).replace('-','')}€</div>
         ${items.map(g => `
           <div class="expense-item">
-            <div class="expense-icon">${CAT_ICONS[g.category] || '💳'}</div>
+            <div class="expense-icon">${CAT_ICONS[g.category] || icon('M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,16V88H32V64Zm0,128H32V104H224v88Zm-16-24a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h32A8,8,0,0,1,208,168Zm-64,0a8,8,0,0,1-8,8H120a8,8,0,0,1,0-16h16A8,8,0,0,1,144,168Z')}</div>
             <div class="expense-info">
               <div class="expense-cat">${g.category}</div>
               <div class="expense-sub">${g.subcategory || ''} · ${g.paidBy}</div>
