@@ -1,0 +1,7 @@
+# Datos personales de gastos — este repo es público, esto nunca debe subirse
+skills-data/
+revisiones/
+
+# Claves SSH que no deberían estar en el árbol de trabajo de un repo público
+key
+key.pub

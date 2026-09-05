@@ -732,11 +732,41 @@ function init() {
   setToday();
   document.getElementById('script-url').value = config.scriptUrl || '';
   updateSubtitle();
+  syncFromSheets();
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) syncFromSheets();
+  });
 }
 
-function updateSubtitle() {
+function updateSubtitle(status) {
   const sub = document.getElementById('header-subtitle');
-  sub.textContent = config.scriptUrl ? '✓ Conectado a Google Sheets' : 'Sin conectar — configura primero';
+  if (!config.scriptUrl) {
+    sub.textContent = 'Sin conectar — configura primero';
+    return;
+  }
+  if (status === 'syncing') {
+    sub.textContent = '↻ Sincronizando…';
+  } else if (status === 'error') {
+    sub.textContent = '⚠️ Sin conexión — mostrando datos guardados';
+  } else {
+    const now = new Date();
+    const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    sub.textContent = `✓ Sincronizado · ${time}`;
+  }
+}
+
+// Trae los datos de la hoja al abrir la app y cada vez que vuelve a primer
+// plano (cambiar de app y volver, desbloquear el móvil...). Así el Historial
+// y el Resumen reflejan también lo que se añade directamente en la hoja,
+// no solo lo metido desde este formulario.
+async function syncFromSheets() {
+  if (!config.scriptUrl) return;
+  updateSubtitle('syncing');
+  const data = await fetchGastosFromSheets();
+  updateSubtitle(data ? 'ok' : 'error');
+  if (currentTab === 'resumen') renderResumen();
+  if (currentTab === 'historial') renderHistorial();
 }
 
 function setToday() {
@@ -764,7 +794,10 @@ function toggleBeneficiario(name) {
   document.getElementById('pill-ben-viboras').classList.toggle('selected', selectedBeneficiarios.includes('Viboras'));
 }
 
+let currentTab = 'nuevo';
+
 function showTab(tab) {
+  currentTab = tab;
   ['nuevo','resumen','historial','config'].forEach(t => {
     document.getElementById(`view-${t}`).style.display = t === tab ? '' : 'none';
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
