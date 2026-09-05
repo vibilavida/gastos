@@ -922,12 +922,11 @@ let resumenExcludedPagadores = new Set();
 let resumenAllCats = [];
 let resumenAllPagadores = [];
 
-async function renderResumen() {
-  const container = document.getElementById('resumen-content');
-  container.innerHTML = '<div class="empty-state">Cargando…</div>';
-
-  const fromSheets = await fetchGastosFromSheets();
-  const data = fromSheets || gastos;
+function renderResumen() {
+  // gastos ya está sincronizado por syncFromSheets() (al abrir la app y al
+  // volver a primer plano) — pintar con lo que hay en memoria es instantáneo
+  // y evita pedirle los mismos datos a Google Sheets dos veces seguidas.
+  const data = gastos;
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -1144,12 +1143,11 @@ function clearResumenFilters() {
 
 let historialData = [];
 
-async function renderHistorial() {
-  const container = document.getElementById('historial-content');
-  container.innerHTML = '<div class="empty-state">Cargando…</div>';
-
-  const fromSheets = await fetchGastosFromSheets();
-  historialData = (fromSheets || gastos).slice().sort((a, b) => {
+function renderHistorial() {
+  // Igual que en Resumen: pinta con lo que syncFromSheets ya sincronizó,
+  // sin volver a pedirlo — así no se nota el viaje de ida y vuelta a Google
+  // cada vez que entras en la pestaña.
+  historialData = gastos.slice().sort((a, b) => {
     return (b.date || '').localeCompare(a.date || '');
   });
 
