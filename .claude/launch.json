@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "menu-semanal",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "4321", "/Users/cristinaviborascaballero/Desktop/artefactos-ia/menu-semanal"],
+      "port": 4321
+    },
+    {
+      "name": "gastos-local",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4322", "--directory", "/Users/cristinaviborascaballero/gastos"],
+      "port": 4322
+    }
+  ]
+}

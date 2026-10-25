@@ -5,3 +5,4 @@ revisiones/
 # Claves SSH que no deberían estar en el árbol de trabajo de un repo público
 key
 key.pub
+.DS_Store
